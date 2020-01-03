@@ -7,6 +7,7 @@ Finding similarities and redundancy in chemical data sets.
 git clone https://github.com/moozeq/DD_Redun.git
 
 cd DD_Redun
+git submodule update --init --recursive
 pip3 install -r requirements.txt
 ```
 
