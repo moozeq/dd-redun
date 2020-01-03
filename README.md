@@ -27,3 +27,14 @@ cat db.smi | ./app.py
 ```bash
 ./app.py db.smi
 ```
+
+## Prepare database
+Required:
+- open babel
+
+1. Download PDBBind database (e.g. CASF-2016)
+2. In __CASF-2016/coreset__ run script from below (simply getting smiles and id for each ligand):
+    ```bash
+    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> results.smi; done
+    ```
+3. Database should be at __CASF-2016/coreset/results.smi__
