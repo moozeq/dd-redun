@@ -21,3 +21,8 @@ pip3 install -r requirements.txt
 ```bash
 cat db.smi | ./app.py
 ```
+
+## Database file
+```bash
+./app.py db.smi
+```
