@@ -50,7 +50,13 @@ class Ligand:
 # compering methods used in scaffolding
 comp_modes = [
     'RINGS_WITH_LINKERS_1', 'RINGS_WITH_LINKERS_2', 'MURCKO_1', 'MURCKO_2', 'OPREA_1', 'OPREA_2', 'OPREA_3',
-    'SCHUFFENHAUER_1', 'SCHUFFENHAUER_2', 'SCHUFFENHAUER_3', 'SCHUFFENHAUER_4', 'SCHUFFENHAUER_5']
+    'SCHUFFENHAUER_1', 'SCHUFFENHAUER_2', 'SCHUFFENHAUER_3', 'SCHUFFENHAUER_4', 'SCHUFFENHAUER_5'
+]
+
+# shortcuts for compering methods
+comp_short_modes = [
+    'rwl1', 'rwl2', 'mur1', 'mur2', 'opr1', 'opr2', 'opr3', 'sch1', 'sch2', 'sch3', 'sch4', 'sch5'
+]
 
 # application modes, read help
 app_modes = [
@@ -59,12 +65,12 @@ app_modes = [
 
 # application ascii art, typical
 app_art = '''
-██████╗ ███████╗██████╗ ██╗   ██╗███╗   ██╗
-██╔══██╗██╔════╝██╔══██╗██║   ██║████╗  ██║
-██████╔╝█████╗  ██║  ██║██║   ██║██╔██╗ ██║
-██╔══██╗██╔══╝  ██║  ██║██║   ██║██║╚██╗██║
-██║  ██║███████╗██████╔╝╚██████╔╝██║ ╚████║
-╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═══╝
+    ██████╗ ███████╗██████╗ ██╗   ██╗███╗   ██╗
+    ██╔══██╗██╔════╝██╔══██╗██║   ██║████╗  ██║
+    ██████╔╝█████╗  ██║  ██║██║   ██║██╔██╗ ██║
+    ██╔══██╗██╔══╝  ██║  ██║██║   ██║██║╚██╗██║
+    ██║  ██║███████╗██████╔╝╚██████╔╝██║ ╚████║
+    ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═══╝
 
 '''
 
@@ -85,10 +91,17 @@ def main():
                         ''')
     parser.add_argument('-s', '--sim', type=str, default='dice', choices=['dice', 'tanimoto'],
                         help='fingerprint similarity scoring function')
-    parser.add_argument('-c', '--comp', type=str, default='RINGS_WITH_LINKERS_1', choices=comp_modes,
-                        help='inhibitors compering method')
+    parser.add_argument('-c', '--comp', type=str, default='rwl1', choices=comp_short_modes,
+                        help=
+                        '''
+                            inhibitors compering method:
+                                rwl = rings with linkers,
+                                mur = murcko,
+                                opr = oprea,
+                                sch = schuffenhauer
+                        ''')
     parser.add_argument('-t', '--threshold', type=float, default=0.5,
-                        help='similarity threshold')
+                        help='similarity threshold inclusive (0.0 - 1.0)')
     parser.add_argument('-o', '--output', type=str,
                         help='output filename, graphs will be saved with suffix _sim.png/_dist.png')
     args = parser.parse_args()
@@ -121,7 +134,7 @@ def main():
     # using scoring function, compare all vs all
     similarities = [[round(sim_scoring(fp, cfp), 4) for cfp in fps] for fp in fps]
     # filter scores with proper threshold
-    similarities = [list(map(lambda x: x if x > args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
+    similarities = [list(map(lambda x: x if x >= args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
 
     # remove output file if exists
     if args.output and os.path.exists(args.output):
