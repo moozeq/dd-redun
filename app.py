@@ -47,6 +47,7 @@ def main():
                         help='fingerprint similarity scoring function')
     parser.add_argument('-c', '--comp', type=str, help='inhibitors compering method', default='RINGS_WITH_LINKERS_1',
                         choices=comp_modes)
+    parser.add_argument('-t', '--threshold', type=float, default=0.5, help='similarity threshold')
     parser.add_argument('-o', '--output', type=str, help='output file')
     args = parser.parse_args()
     if args.database == '-':
@@ -62,6 +63,7 @@ def main():
 
     sim_scoring = DataStructs.FingerprintSimilarity if args.sim == 'tanimoto' else DataStructs.DiceSimilarity
     similarities = [[round(sim_scoring(fp, cfp), 4) for cfp in fps] for fp in fps]
+    similarities = [list(map(lambda x: x if x > args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
 
     # similarities graph
     if args.mode in ['all', 'sim']:
