@@ -8,6 +8,7 @@ import numpy as np
 from rdkit import Chem
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
+from rdkit.Chem.Fingerprints import FingerprintMols
 
 from DD_Scaffolds import scaffolds
 
@@ -68,9 +69,17 @@ def main():
     ligands_map = {ligand.index: ligand.name for ligand in ligands}
 
     smiles = Chem.SmilesMolSupplier(args.database, titleLine=False)
-    fps = [AllChem.GetMorganFingerprint(smile, 2) for smile in smiles]
 
-    sim_scoring = DataStructs.FingerprintSimilarity if args.sim == 'tanimoto' else DataStructs.DiceSimilarity
+    if args.sim == 'dice':
+        fps = [AllChem.GetMorganFingerprint(smile, 2) for smile in smiles]
+        sim_scoring = DataStructs.DiceSimilarity
+    elif args.sim == 'tanimoto':
+        fps = [FingerprintMols.FingerprintMol(smile) for smile in smiles]
+        sim_scoring = DataStructs.FingerprintSimilarity
+    else:
+        print(f'[-] Wrong similiarity scoring function')
+        sys.exit(1)
+
     similarities = [[round(sim_scoring(fp, cfp), 4) for cfp in fps] for fp in fps]
     similarities = [list(map(lambda x: x if x > args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
 
