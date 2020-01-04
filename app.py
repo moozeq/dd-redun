@@ -26,6 +26,7 @@ class Ligand:
         if self.name.endswith('_ligand'):
             self.name = self.name[:-len('_ligand')]
         self.index = f'{Ligand.index}'
+        self.info = f'{self.index}: {self.name}'
         Ligand.index += 1
 
 
@@ -34,7 +35,7 @@ comp_modes = [
     'SCHUFFENHAUER_1', 'SCHUFFENHAUER_2', 'SCHUFFENHAUER_3', 'SCHUFFENHAUER_4', 'SCHUFFENHAUER_5']
 
 app_modes = [
-    'all', 'sim', 'scaff', 'dist', 'map'
+    'all', 'sim', 'scaffs', 'dist', 'map'
 ]
 
 
@@ -46,7 +47,7 @@ def main():
                         '''
                             application mode:
                                 sim = similarities graph,
-                                scaff = scaffolds,
+                                scaffs = scaffolds,
                                 dist = similarity distance graph,
                                 map = show index: ligand mapping
                         ''')
@@ -73,26 +74,27 @@ def main():
     similarities = [[round(sim_scoring(fp, cfp), 4) for cfp in fps] for fp in fps]
     similarities = [list(map(lambda x: x if x > args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
 
-    # ligands mapping
-    if args.mode in ['all', 'map']:
-        for index in ligands_map:
-            print(f'{index}: {ligands_map[index]} {ligands[int(index)].smile}')
-
-    # similarities graph
-    if args.mode in ['all', 'sim']:
-        plt.title(f'Ligands {args.sim} similarity map')
-        plt.imshow(similarities, cmap='hot')
-        plt.colorbar()
-        plt.show()
-
     # scaffolding
-    if args.mode in ['all', 'scaff']:
+    if args.mode in ['all', 'scaffs']:
         scaffolds.strip(args.database)
         scaffs = scaffolds.merge(args.database, args.comp)
         scaffolds.show_results(scaffs)
 
+    # ligands mapping
+    if args.mode in ['all', 'map', 'sim', 'dist']:
+        for index in ligands_map:
+            print(f'[{index}]: {ligands_map[index]} {ligands[int(index)].smile}')
+
+    # similarities graph
+    if args.mode in ['all', 'sim']:
+        plt.figure(1)
+        plt.title(f'Ligands {args.sim} similarity map')
+        plt.imshow(similarities, cmap='hot')
+        plt.colorbar()
+
     # dist graph
     if args.mode in ['all', 'dist']:
+        plt.figure(2)
         dist_mat = np.array(similarities)
         G = nx.from_numpy_matrix(dist_mat)
         step = 1.0 / len(fps)
@@ -101,6 +103,8 @@ def main():
                                node_color=[step * i for i in range(len(fps))])
         nx.draw_networkx_labels(G, pos, labels={ligands.index(ligand): ligand.index for ligand in ligands})
         plt.title(f'Ligands {args.sim} similarity graph where distance is similarity')
+
+    if args.mode in ['all', 'sim', 'dist']:
         plt.show()
 
 
