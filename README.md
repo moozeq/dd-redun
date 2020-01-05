@@ -34,9 +34,10 @@ cat db.smi | ./redun.py
 ```
 
 ## Prepare database
-1. Download PDBBind database (e.g. CASF-2016)
-2. In **CASF-2016/coreset** run script from below (simply getting smiles and id for each ligand):
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp))
+2. You may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints
+3. In *CASF-2016/coreset* run script from below (simply getting smiles and id for each ligand):
     ```bash
-    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> results.smi; done
+    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
     ```
-3. Database should be at **CASF-2016/coreset/results.smi**, copy it to DD_Redun folder
+4. Database should be at *CASF-2016/coreset/db.smi*, copy it to DD_Redun folder

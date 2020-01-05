@@ -40,7 +40,7 @@ class Ligand:
             self.name = self.name[:-len('_ligand')]
 
         # ligand info as string
-        self.info = f'[{self.index}]: {self.name} {self.smile}'
+        self.info = f'[{self.index}]:\t{self.name}\t{self.smile}'
 
         # ligand global index
         self.index = f'{Ligand.index}'
@@ -60,7 +60,7 @@ comp_short_modes = [
 
 # application modes, read help
 app_modes = [
-    'all', 'sim', 'scaffs', 'dist', 'map'
+    'all', 'sim', 'scaffs', 'dist', 'map', 'lig'
 ]
 
 # application ascii art, typical
@@ -87,10 +87,13 @@ def main():
                                 sim = similarities graph,
                                 scaffs = scaffolds,
                                 dist = similarity distance graph,
-                                map = show index: ligand mapping
+                                map = show index: ligand mapping,
+                                lig = show ligand similar molecules
                         ''')
     parser.add_argument('-s', '--sim', type=str, default='dice', choices=['dice', 'tanimoto'],
                         help='fingerprint similarity scoring function')
+    parser.add_argument('-l', '--ligand', type=int, default=-1,
+                        help='select ligand to show its similarities')
     parser.add_argument('-c', '--comp', type=str, default='rwl1', choices=comp_short_modes,
                         help=
                         '''
@@ -100,7 +103,7 @@ def main():
                                 opr = oprea,
                                 sch = schuffenhauer
                         ''')
-    parser.add_argument('-t', '--threshold', type=float, default=0.5,
+    parser.add_argument('-t', '--threshold', type=float, default=0.0,
                         help='similarity threshold inclusive (0.0 - 1.0)')
     parser.add_argument('-o', '--output', type=str,
                         help='output filename, graphs will be saved with suffix _sim.png/_dist.png')
@@ -132,9 +135,10 @@ def main():
         sys.exit(1)
 
     # using scoring function, compare all vs all
-    similarities = [[round(sim_scoring(fp, cfp), 4) for cfp in fps] for fp in fps]
+    raw_similarities = [[sim_scoring(fp, cfp) for cfp in fps] for fp in fps]
     # filter scores with proper threshold
-    similarities = [list(map(lambda x: x if x >= args.threshold else 0.0, sim)) for idx, sim in enumerate(similarities)]
+    similarities = [list(map(lambda x: round(x, 4) if x >= args.threshold else 0.0, sim)) for idx, sim in
+                    enumerate(raw_similarities)]
 
     # remove output file if exists
     if args.output and os.path.exists(args.output):
@@ -143,32 +147,64 @@ def main():
 
     # scaffolding
     if args.mode in ['all', 'scaffs']:
+        section_header = '========= SCAFFOLDS ========='
         # strip smiles to scaffolds
         scaffolds.strip(args.database)
         # merge ligands with same scaffolds
         scaffs = scaffolds.merge(args.database, args.comp)
         # show results
+        print(section_header)
         results = scaffolds.show_results(scaffs)
         # if output filename was provided, write to file
         if args.output:
             with open(args.output, 'a') as out:
-                out.write('========= SCAFFOLDS =========')
+                out.write(f'{section_header}\n')
                 out.write(results)
 
     # ligands mapping
     if args.mode in ['all', 'map', 'sim', 'dist']:
+        section_header = '========= LIGANDS MAPPING ========='
         # get mapping as string and print to stdout
         mapping = '\n'.join([ligand.info for ligand in ligands])
+        print(section_header)
         print(mapping)
         # if output filename was provided, write to file
         if args.output:
             with open(args.output, 'a') as out:
-                out.write('========= LIGANDS MAPPING =========')
+                out.write(f'{section_header}\n')
                 out.write(mapping)
+
+    # selected ligand similar molecules
+    if args.mode in ['all', 'lig', 'sim', 'dist']:
+        section_header = '========= LIGAND SIMILARITIES ========='
+        if 0 <= args.ligand < len(ligands):
+            # get raw similarities for ligand
+            ligand_similarities = raw_similarities[args.ligand]
+            # convert to dict where index: similarity
+            ligand_sim_dict = {k: v for k, v in enumerate(ligand_similarities)}
+            # sort dict by similarities where highest scores are at the bottom
+            ligand_sim_dict = {k: v for k, v in sorted(ligand_sim_dict.items(), key=lambda item: item[1], reverse=True)}
+            # round to 4 places
+            ligand_sim_dict = {k: round(v, 4) for k, v in ligand_sim_dict.items()}
+            # get similarities as string
+            ligand_sims = '\n'.join([f'{sim:.4f}\t{ligands[key].info}' for key, sim in ligand_sim_dict.items()])
+            header = f'''Selected ligand:\n\t{ligands[
+                args.ligand].info}\nSimilarity scoring mode:\n\t{args.sim}\n\nscore\tindex\tid\tsmiles\n'''
+            print(section_header)
+            print(header)
+            print(ligand_sims)
+            if args.output:
+                with open(args.output, 'a') as out:
+                    out.write(f'{section_header}\n')
+                    out.write(header)
+                    out.write(ligand_sims)
+        elif args.ligand > 0:
+            print(f'[-] Wrong ligand selected, available indexes: (0 - {len(ligands) - 1})')
 
     # similarities graph
     if args.mode in ['all', 'sim']:
         plt.figure()
+        plt.grid()
         plt.title(f'Ligands {args.sim} similarity map')
         # show similarities between ligands as hot map
         plt.imshow(similarities, cmap='hot')
