@@ -11,6 +11,16 @@ git submodule update --init --recursive
 pip3 install -r requirements.txt
 ```
 
+## Prepare database
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp))
+2. You may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints
+3. In *CASF-2016/coreset* run script from below (simply getting smiles and id for each ligand):
+    ```bash
+    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
+    ```
+4. Database should be at *CASF-2016/coreset/db.smi*, copy it into DD_Redun folder
+5. For docking functionality you need to also copy *coreset* folder into DD_Redun folder
+
 ## Requirements
 ### Main functionality
 - [openbabel](http://openbabel.org/wiki/Main_Page)
@@ -31,23 +41,14 @@ pip3 install -r requirements.txt
 ./scorun.py -h
 ```
 
-## In pipeline
-```bash
-cat db.smi | ./redun.py
-cat db.smi | ./scorun.py [ints]
-```
-
 ## Database file
 ```bash
 ./redun.py db.smi
 ./scorun.py db.smi [ints]
 ```
 
-## Prepare database
-1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp))
-2. You may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints
-3. In *CASF-2016/coreset* run script from below (simply getting smiles and id for each ligand):
-    ```bash
-    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
-    ```
-4. Database should be at *CASF-2016/coreset/db.smi*, copy it to DD_Redun folder
+## In pipeline
+```bash
+cat db.smi | ./redun.py
+cat db.smi | ./scorun.py [ints]
+```
