@@ -2,3 +2,4 @@ numpy
 networkx
 rdkit
 matplotlib
+sklearn

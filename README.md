@@ -12,25 +12,35 @@ pip3 install -r requirements.txt
 ```
 
 ## Requirements
-
+### Main functionality
 - [openbabel](http://openbabel.org/wiki/Main_Page)
+
+### Scaffolds
 - [strip-it](http://silicos-it.be.s3-website-eu-west-1.amazonaws.com/software/strip-it/1.0.2/strip-it.html)
+
+### Docking
+- [AutoDock Vina](http://vina.scripps.edu/)
+- [ODDT](https://pythonhosted.org/oddt/)
+- PDBBind coreset
 
 # Usage
 
 ## Help
 ```bash
 ./redun.py -h
+./scorun.py -h
 ```
 
 ## In pipeline
 ```bash
 cat db.smi | ./redun.py
+cat db.smi | ./scorun.py [ints]
 ```
 
 ## Database file
 ```bash
 ./redun.py db.smi
+./scorun.py db.smi [ints]
 ```
 
 ## Prepare database
