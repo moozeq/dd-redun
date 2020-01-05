@@ -137,8 +137,7 @@ def main():
     # using scoring function, compare all vs all
     raw_similarities = [[sim_scoring(fp, cfp) for cfp in fps] for fp in fps]
     # filter scores with proper threshold
-    similarities = [list(map(lambda x: round(x, 4) if x >= args.threshold else 0.0, sim)) for idx, sim in
-                    enumerate(raw_similarities)]
+    similarities = [list(map(lambda x: round(x, 4) if x >= args.threshold else 0.0, sim)) for sim in raw_similarities]
 
     # remove output file if exists
     if args.output and os.path.exists(args.output):
@@ -238,5 +237,5 @@ def main():
         plt.show()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
