@@ -39,7 +39,10 @@ class Ligand:
         if self.name.endswith('_ligand'):
             self.name = self.name[:-len('_ligand')]
 
-        # ligand info as string
+        # ligand short info as string
+        self.short_info = f'[{self.index}]: {self.name}'
+
+        # ligand full info as string
         self.info = f'[{self.index}]:\t{self.name}\t{self.smile}'
 
         # ligand global index
@@ -64,7 +67,7 @@ app_modes = [
 ]
 
 # application ascii art, typical
-app_art = '''
+app_info = '''
     ██████╗ ███████╗██████╗ ██╗   ██╗███╗   ██╗
     ██╔══██╗██╔════╝██╔══██╗██║   ██║████╗  ██║
     ██████╔╝█████╗  ██║  ██║██║   ██║██╔██╗ ██║
@@ -72,12 +75,12 @@ app_art = '''
     ██║  ██║███████╗██████╔╝╚██████╔╝██║ ╚████║
     ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═══╝
 
+Helping finding similarities in smiles database
 '''
 
 
 def main():
-    parser = argparse.ArgumentParser(description=app_art + 'Finding similarities in smiles database',
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=app_info, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('database', nargs='?', default='-', type=str,
                         help='smiles database filename')
     parser.add_argument('-m', '--mode', type=str, default='all', choices=app_modes,
