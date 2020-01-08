@@ -33,17 +33,27 @@ if [[ ! -f "${RECEPTOR_FILE_PDBQT}" ]]; then
     echo "[+] Converted protein: pdb -> pdbqt"
 fi
 
+DOCKING_RESULTS_FILE=docking_ligand${2}_protein${3}.pdbqt
+DOCKING_RESULTS_FILE_RESCORED=docking_ligand${2}_protein${3}_rescored.mol2
+
 if [[ ! -f "${DOCKING_RESULTS_FILE}" ]]; then
-    COORD_X=$(cat ${RECEPTOR_LIGAND_FILE_MOL2} | grep "@<TRIPOS>ATOM" -A 1 | tail -1 | awk '{print $3}')
-    COORD_Y=$(cat ${RECEPTOR_LIGAND_FILE_MOL2} | grep "@<TRIPOS>ATOM" -A 1 | tail -1 | awk '{print $4}')
-    COORD_Z=$(cat ${RECEPTOR_LIGAND_FILE_MOL2} | grep "@<TRIPOS>ATOM" -A 1 | tail -1 | awk '{print $5}')
+    COORDS_NUM=$(sed -n -e '/@<TRIPOS>ATOM/,/@<TRIPOS>BOND/ p' ${RECEPTOR_LIGAND_FILE_MOL2} | wc -l)
+    ((COORDS_NUM = COORDS_NUM - 2)) # remove first and last empty lines
+    COORD_X=$(sed -n -e '/@<TRIPOS>ATOM/,/@<TRIPOS>BOND/ p' ${RECEPTOR_LIGAND_FILE_MOL2} | awk '{print $3}' | awk '{s+=$1} END {print s}')
+    COORD_X=$(echo "$COORD_X / $COORDS_NUM" | bc -l)
+    COORD_Y=$(sed -n -e '/@<TRIPOS>ATOM/,/@<TRIPOS>BOND/ p' ${RECEPTOR_LIGAND_FILE_MOL2} | awk '{print $4}' | awk '{s+=$1} END {print s}')
+    COORD_Y=$(echo "$COORD_Y / $COORDS_NUM" | bc -l)
+    COORD_Z=$(sed -n -e '/@<TRIPOS>ATOM/,/@<TRIPOS>BOND/ p' ${RECEPTOR_LIGAND_FILE_MOL2} | awk '{print $5}' | awk '{s+=$1} END {print s}')
+    COORD_Z=$(echo "$COORD_Z / $COORDS_NUM" | bc -l)
+
+    BOX_X=20
+    BOX_Y=20
+    BOX_Z=20
 
     echo "[+] Protein active center coords = (${COORD_X}, ${COORD_Y}, ${COORD_Z})"
+    echo "[+] Protein acitve center box size = (${BOX_X}, ${BOX_Y}, ${BOX_Z})"
 
-    DOCKING_RESULTS_FILE=docking_ligand${2}_protein${3}.pdbqt
-    DOCKING_RESULTS_FILE_RESCORED=docking_ligand${2}_protein${3}_rescored.mol2
-
-    vina --receptor ${RECEPTOR_FILE_PDBQT} --ligand ${LIGAND_FILE_PDBQT} --size_x 20 --size_y 20 --size_z 20 --center_x ${COORD_X} --center_y ${COORD_Y} --center_z ${COORD_Z} --out ${DOCKING_RESULTS_FILE}
+    vina --receptor ${RECEPTOR_FILE_PDBQT} --ligand ${LIGAND_FILE_PDBQT} --size_x ${BOX_X} --size_y ${BOX_Y} --size_z ${BOX_Z} --center_x ${COORD_X} --center_y ${COORD_Y} --center_z ${COORD_Z} --out ${DOCKING_RESULTS_FILE}
     echo "[*] Docking completed, results at: ${DOCKING_RESULTS_FILE}"
 fi
 
