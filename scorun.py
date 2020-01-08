@@ -70,7 +70,7 @@ def main():
                 sys.exit(1)
             # open result file
             with open(result_file, 'r') as result_file:
-                print(f'[*] Scoring {ligand_index}->{ligand_sec_index}')
+                print(f'\n[*] Scoring {ligand_index}->{ligand_sec_index}')
                 current_score = {}
                 for line in result_file:
                     # break loop after one molecule, get only the best one
@@ -91,13 +91,15 @@ def main():
                 # add all scores under ligand key
                 results[result_key] = current_score
     # convert dict to list
-    results_list = [[ligand_score[score] for score in scores] for ligand_score in results.values()]
+    results_list = [[ligand_score[score] for ligand_score in results.values()] for score in scores]
     # normalize scores results
     results_list = preprocessing.normalize(results_list)
     # absolute value because of vina affinity
     results_list = [list(map(lambda x: abs(x), ligand_scores)) for ligand_scores in results_list]
+    # transpose to get list of scores for each ligand
+    results_list = list(map(list, zip(*results_list)))
     # sum all scores
-    results_list = [sum(ligand_scores) for ligand_scores in results_list]
+    results_list = [sum(ligand_scores) / len(scores) for ligand_scores in results_list]
     # use results_order to get ligands ids back
     results_sum = {results_order[index]: ligand_score for index, ligand_score in enumerate(results_list)}
     # get names
