@@ -57,12 +57,12 @@ def main():
             result_key = f'{ligand_index}->{ligand_sec_index}'
             # preserve order
             results_order.append(result_key)
-            # result file should be named like this when docked with script 'dock'
+            # result file should be named like this when docked with script 'dock.sh'
             result_file = f'docking_ligand{ligand_index}_protein{ligand_sec_index}_rescored.mol2'
             ret = 0
-            # if file doesn't exists, run 'dock' script
+            # if file doesn't exists, run 'dock.sh' script
             if not os.path.exists(result_file):
-                ret = subprocess.call(['./dock', args.database, str(ligand_index), str(ligand_sec_index)])
+                ret = subprocess.call(['./dock.sh', args.database, str(ligand_index), str(ligand_sec_index)])
             # if returned something other than 0, error occured
             if ret:
                 print(f'''[-] Docking {ligands[ligand_index].short_info} to protein from {ligands[
@@ -70,6 +70,7 @@ def main():
                 sys.exit(1)
             # open result file
             with open(result_file, 'r') as result_file:
+                print(f'[*] Scoring {ligand_index}->{ligand_sec_index}')
                 current_score = {}
                 for line in result_file:
                     # break loop after one molecule, get only the best one
@@ -86,6 +87,7 @@ def main():
                                 sys.exit(1)
                             # save score under proper key
                             current_score[score] = float(line_elements[2])
+                            print(f'\t[+] {score} = {float(line_elements[2])}')
                 # add all scores under ligand key
                 results[result_key] = current_score
     # convert dict to list
@@ -98,6 +100,9 @@ def main():
     results_list = [sum(ligand_scores) for ligand_scores in results_list]
     # use results_order to get ligands ids back
     results_sum = {results_order[index]: ligand_score for index, ligand_score in enumerate(results_list)}
+    # get names
+    results_names = [f'{ligands[int(key.split("->")[0])].name}->{ligands[int(key.split("->")[1])].name}' for key, score
+                     in results_sum.items()]
 
     # remove output file if exists
     if args.output and os.path.exists(args.output):
@@ -105,8 +110,9 @@ def main():
         os.remove(args.output)
 
     # convert dict to string, score with 8 places after dot
-    results_to_print = '\n'.join([f'{key}\t{score:.8f}' for key, score in results_sum.items()])
-    print('Results format:\n\tligand->receptor\tscore\n')
+    results_to_print = '\n'.join(
+        [f'{key}\t{results_names[index]}\t{score:.8f}' for index, (key, score) in enumerate(results_sum.items())])
+    print('\nResults format:\n\tligand->receptor\tscore\n')
     print(results_to_print)
     # save to file if specified
     if args.output:
