@@ -54,11 +54,11 @@ if [[ ! -f "${DOCKING_RESULTS_FILE}" ]]; then
     echo "[+] Protein acitve center box size = (${BOX_X}, ${BOX_Y}, ${BOX_Z})"
 
     vina --receptor ${RECEPTOR_FILE_PDBQT} --ligand ${LIGAND_FILE_PDBQT} --size_x ${BOX_X} --size_y ${BOX_Y} --size_z ${BOX_Z} --center_x ${COORD_X} --center_y ${COORD_Y} --center_z ${COORD_Z} --out ${DOCKING_RESULTS_FILE}
-    echo "[*] Docking completed, results at: ${DOCKING_RESULTS_FILE}"
+    echo "[+] Docking completed, results at: ${DOCKING_RESULTS_FILE}"
 fi
 
 if [[ ! -f "${DOCKING_RESULTS_FILE_RESCORED}" ]]; then
-    oddt_cli ${DOCKING_RESULTS_FILE} --receptor ${RECEPTOR_FILE_PDBQT} --score rfscore_v1 --score rfscore_v2 --score rfscore_v3 --score nnscore -O ${DOCKING_RESULTS_FILE_RESCORED}
-    echo "[*] Rescoring completed, results at: ${DOCKING_RESULTS_FILE_RESCORED}"
+    oddt_cli ${DOCKING_RESULTS_FILE} --receptor ${RECEPTOR_FILE_PDBQT} --score rfscore_v1 --score rfscore_v2 --score rfscore_v3 --score nnscore -O ${DOCKING_RESULTS_FILE_RESCORED} 2>/dev/null
+    echo "[+] Rescoring completed, results at: ${DOCKING_RESULTS_FILE_RESCORED}"
 fi
 exit 0
