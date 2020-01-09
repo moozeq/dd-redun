@@ -33,6 +33,7 @@ def main():
     parser.add_argument('database', nargs='?', default='-', type=str,
                         help='smiles database filename')
     parser.add_argument('ligands', nargs='+', type=int, help='ligands indexes')
+    parser.add_argument('-d', '--details', action='store_true', help='print detail scores')
     parser.add_argument('-o', '--output', type=str, help='output filename')
     args = parser.parse_args()
 
@@ -90,16 +91,32 @@ def main():
                             print(f'\t[+] {score} = {float(line_elements[2])}')
                 # add all scores under ligand key
                 results[result_key] = current_score
+    from pprint import pprint
     # convert dict to list
     results_list = [[ligand_score[score] for ligand_score in results.values()] for score in scores]
+    if 'details' in args:
+        print('\n[+] result scores:')
+        pprint(results_list, width=200)
     # normalize scores results
     results_list = preprocessing.normalize(results_list)
+    if 'details' in args:
+        print('\n[+] normalized scores:')
+        pprint(results_list.tolist(), width=200)
     # absolute value because of vina affinity
     results_list = [list(map(lambda x: abs(x), ligand_scores)) for ligand_scores in results_list]
+    if 'details' in args:
+        print('\n[+] absolute scores:')
+        pprint(results_list, width=200)
     # transpose to get list of scores for each ligand
     results_list = list(map(list, zip(*results_list)))
+    if 'details' in args:
+        print('\n[+] transposed scores:')
+        pprint(results_list, width=200)
     # sum all scores
     results_list = [sum(ligand_scores) / len(scores) for ligand_scores in results_list]
+    if 'details' in args:
+        print('\n[+] total scores:')
+        pprint(results_list, width=200)
     # use results_order to get ligands ids back
     results_sum = {results_order[index]: ligand_score for index, ligand_score in enumerate(results_list)}
     # get names
