@@ -113,7 +113,7 @@ def main():
         print('\n[+] transposed scores:')
         pprint(results_list, width=200)
     # sum all scores
-    results_list = [sum(ligand_scores) / len(scores) for ligand_scores in results_list]
+    results_list = [sum(ligand_scores) / len(scores) * len(args.ligands) for ligand_scores in results_list]
     if 'details' in args:
         print('\n[+] total scores:')
         pprint(results_list, width=200)
