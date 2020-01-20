@@ -207,6 +207,9 @@ def main():
                         help='output filename, graphs will be saved with suffix _sim.png/_dist.png')
     args = parser.parse_args()
 
+    # create directory
+    Path(args.dir).mkdir(parents=True, exist_ok=True)
+
     # read from stdin if no filename provided
     if args.database == '-':
         with open('.temp', 'w') as temp:
@@ -223,9 +226,6 @@ def main():
             sys.exit(1)
         else:
             print(f'[+] All files loaded properly ({len(receptors) * 2}/{len(receptors) * 2})\n')
-
-    # create directory
-    Path(args.dir).mkdir(parents=True, exist_ok=True)
 
     if args.concurrency:
         compare_func = receptor_compare_con
