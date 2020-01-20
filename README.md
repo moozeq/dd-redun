@@ -47,8 +47,6 @@ pip3 install -r requirements.txt
 
 ### Receptors
 - [G-LoSA](https://compbio.lehigh.edu/GLoSA/index.html)
-    - **glosa** executable binary in DD_Redun folder
-    - **Atom.class** and **AssignChemicalFeatures.class** in DD_Redun folder
 
 # Usage
 

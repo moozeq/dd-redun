@@ -121,7 +121,7 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
     global index, count
     output_filename = f'{receptor1.name}_{receptor2.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor1.name}_{receptor2.name}.out'
     output_filename_opt = f'{receptor2.name}_{receptor1.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor2.name}_{receptor1.name}.out'
-    cmd = ['./glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename, '-s2cf',
+    cmd = ['glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename, '-s2cf',
            receptor2.cf_filename]
 
     print(f'[*] [{receptor1.name}] [{index % count:3} / {count:3}] Comparing to: {receptor2.name}\tscore:\t', end='')
@@ -155,7 +155,7 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
         print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
         Path(output_filename).unlink()
 
-    return 0.0
+    return score if score >= 0.0 else 0.0
 
 
 def receptor_compare(receptor: Receptor, receptors: list) -> list:
