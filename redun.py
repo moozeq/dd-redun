@@ -27,6 +27,7 @@ class Ligand:
             self.name = None
             self.index = None
             self.info = None
+            self.short_info = None
             return
 
         # ligand smile
