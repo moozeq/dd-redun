@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-index = 0
-count = 0
+index = 1
+count = 1
 
 
 class TermColors:
