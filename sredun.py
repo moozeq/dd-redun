@@ -201,7 +201,7 @@ def main():
                                 map = show index: protein mapping,
                                 pro = show protein similar receptors
                         ''')
-    parser.add_argument('-p', '--protein', type=int, default=-1,
+    parser.add_argument('-p', '--protein', type=int, default=-1, nargs='*',
                         help='select protein to show its similarities')
     parser.add_argument('-c', '--concurrency', action='store_true',
                         help='parallel computation')
@@ -239,8 +239,14 @@ def main():
     else:
         compare_func = receptor_compare
 
-    if args.mode in ['pro'] and len(receptors) > args.protein >= 0:
-        raw_similarities = compare_func(receptors[args.protein], receptors)
+    if args.mode in ['pro']:
+        if len(args.protein) == 1 and len(receptors) > args.protein >= 0:
+            raw_similarities = [compare_func(receptors[args.protein], receptors)]
+        elif len(args.protein) == 2 and len(receptors) > args.protein[0] >= 0 and len(receptors) > args.protein[1] >= 0:
+            raw_similarities = [compare_func(receptors[args.protein[0]], [receptors[args.protein[1]]])]
+        else:
+            print(f'[-] Wrong arguments: {args.protein}')
+            sys.exit(1)
     else:
         # using scoring function, compare all vs all
         raw_similarities = [compare_func(rec, receptors) for rec in receptors]
@@ -269,9 +275,12 @@ def main():
     # selected receptor similar proteins
     if args.mode in ['all', 'pro', 'sim', 'dist']:
         section_header = '========= RECEPTOR SIMILARITIES ========='
-        if 0 <= args.protein < len(receptors):
+
+        if (len(args.protein) == 1 and 0 <= args.protein < len(receptors)) or (
+                len(args.protein) == 2 and 0 <= args.protein[0] < len(receptors)):
+
             # get raw similarities for receptors
-            receptor_similarities = raw_similarities[args.protein]
+            receptor_similarities = raw_similarities[args.protein if len(args.protein) == 1 else 0]
             # convert to dict where index: similarity
             receptor_sim_dict = {k: v for k, v in enumerate(receptor_similarities)}
             # sort dict by similarities where highest scores are at the bottom
@@ -281,7 +290,8 @@ def main():
             receptor_sim_dict = {k: round(v, 4) for k, v in receptor_sim_dict.items()}
             # get similarities as string
             receptor_sims = '\n'.join([f'{sim:.4f}\t{receptors[key].info}' for key, sim in receptor_sim_dict.items()])
-            header = f'''Selected receptor:\n\t{receptors[args.protein].info}\n\nscore\tindex\tid\n'''
+            header = f'''Selected receptor:\n\t{receptors[
+                args.protein if len(args.protein) == 1 else 0].info}\n\nscore\tindex\tid\n'''
             print(section_header)
             print(header)
             print(receptor_sims)
