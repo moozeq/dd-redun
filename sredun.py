@@ -10,9 +10,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-index = 1
-count = 1
-
 
 class TermColors:
     HEADER = '\033[95m'
@@ -66,13 +63,13 @@ class Receptor:
         self.index = f'{Receptor.index}'
 
         # directory
-        self.directory = directory
+        self.directory = directory if directory.endswith('/') else f'{directory}/' if directory else ''
 
         # receptor filename
-        self.filename = f'{self.name}_pocket.pdb' if not directory else f'{directory}/{self.name}_pocket.pdb'
+        self.filename = f'{self.directory}{self.name}_pocket.pdb'
 
         # receptor chemical features filename
-        self.cf_filename = f'{self.name}_pocket-cf.pdb' if not directory else f'{directory}/{self.name}_pocket-cf.pdb'
+        self.cf_filename = f'{self.directory}{self.name}_pocket-cf.pdb'
 
         Receptor.index += 1
 
@@ -118,52 +115,42 @@ def get_ga_score(glosa_output: str) -> float:
     return -1.0
 
 
-def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
-    global index, count
-    output_filename = f'{receptor1.name}_{receptor2.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor1.name}_{receptor2.name}.out'
-    output_filename_opt = f'{receptor2.name}_{receptor1.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor2.name}_{receptor1.name}.out'
+def glosa(receptor1: Receptor, receptor2: Receptor, info: str = '') -> dict:
+    glosa_output = ''
     cmd = ['glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename, '-s2cf',
            receptor2.cf_filename]
-    info = f'[{index % count:3} / {count:3}] {receptor1.index}<->{receptor2.index}\t{receptor1.name}<->{receptor2.name}\tscore:\t'
-    index += 1
+    for i in range(3):
+        try:
+            glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
+            return {'score': get_ga_score(glosa_output), 'output': glosa_output}
+        except subprocess.CalledProcessError as e:
+            print(f'[*] {info}{TermColors.FAIL}ERROR{TermColors.ENDC}\t{TermColors.OKBLUE}RETRYING...{TermColors.ENDC}\n\tCMD = {" ".join(cmd)}\n\tREASON = {e.output}')
+    return {'score': -1.0, 'output': glosa_output}
 
-    glosa_output = ''
+
+def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
+    output_filename = f'{receptor1.directory}{receptor1.name}_{receptor2.name}.out'
+    output_filename_opt = f'{receptor1.directory}{receptor2.name}_{receptor1.name}.out'
+    info = f'{receptor1.index}<->{receptor2.index}\t{receptor1.name}<->{receptor2.name}\tscore:\t'
+
     # no file at proper path and optional path
     if not Path(output_filename).exists() and not Path(output_filename_opt).exists():
-        for i in range(3):
-            try:
-                glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
-            except subprocess.CalledProcessError as e:
-                print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}\n\tCMD = {" ".join(cmd)}\n\tREASON = {e.output}\n\t{TermColors.OKBLUE}RETRYING{TermColors.ENDC}')
-                if i >= 2:
-                    return 0.0
-        else:
-            with open(output_filename, 'w') as out_file:
-                out_file.write(glosa_output)
-    # path at proper or optional path
+        result = glosa(receptor1, receptor2, info)
+        score = result['score']
+        with open(output_filename, 'w') as results:
+            results.write(result['output'])
     else:
-        if Path(output_filename_opt).exists():
-            with open(output_filename_opt, 'r') as out_file:
-                glosa_output = out_file.read()
-            # only one file should exist
-            with open(output_filename, 'w') as out_file:
-                out_file.write(glosa_output)
-            Path(output_filename_opt).unlink()
-        else:
-            with open(output_filename, 'r') as out_file:
-                glosa_output = out_file.read()
+        filename = output_filename if Path(output_filename).exists() else output_filename_opt
+        with open(filename, 'r') as results:
+            score = get_ga_score(results.read())
 
-    score = get_ga_score(glosa_output)
     if score >= 0.0:
-        if score > 0.8:
-            print(f'{info}{TermColors.WARNING}{score: .6f}{TermColors.ENDC}')
-        else:
-            print(f'{info}{TermColors.OKGREEN}{score: .6f}{TermColors.ENDC}')
+        color = TermColors.WARNING if score > 0.8 else TermColors.OKGREEN
+        print(f'[+] {info}{color}{score: .6f}{TermColors.ENDC}')
+        return score
     else:
-        print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}')
-        Path(output_filename).unlink()
-
-    return score if score >= 0.0 else 0.0
+        print(f'[-] {info}{TermColors.FAIL}ERROR{TermColors.ENDC}')
+        return 0.0
 
 
 def receptor_compare(receptor: Receptor, receptors: list) -> list:
@@ -240,9 +227,6 @@ def main():
     # create directory
     Path(args.dir).mkdir(parents=True, exist_ok=True)
 
-    global index, count
-    index = 1
-    count = len(receptors)
     if args.concurrency:
         compare_func = receptor_compare_con
     else:
@@ -263,14 +247,17 @@ def main():
         if args.mode == 'map':
             sys.exit(0)
 
+    # compare only one receptor against others
     if args.mode in ['pro']:
         if len(args.protein) == 1 and len(receptors) > args.protein[0] >= 0:
-            raw_similarities = [compare_func(receptors[args.protein[0]], receptors)]
+            recs = receptors
         elif len(args.protein) == 2 and len(receptors) > args.protein[0] >= 0 and len(receptors) > args.protein[1] >= 0:
-            raw_similarities = [compare_func(receptors[args.protein[0]], [receptors[args.protein[1]]])]
+            recs = [receptors[args.protein[1]]]
         else:
             print(f'[-] Wrong arguments: {args.protein}')
             sys.exit(1)
+
+        raw_similarities = [compare_func(receptors[args.protein[0]], recs)]
     else:
         # using scoring function, compare all vs all
         raw_similarities = [compare_func(rec, receptors) for rec in receptors]
@@ -283,13 +270,17 @@ def main():
         print(f'[*] Overwriting output file = {args.output}')
         os.remove(args.output)
 
+    # TODO change this workaround to properly handled case
+    if args.mode == 'pro' and len(args.protein) > 1:
+        args.mode = ''
+
     # selected receptor similar proteins
     if args.mode in ['all', 'pro', 'sim', 'dist']:
         section_header = '========= RECEPTOR SIMILARITIES ========='
 
         if (len(args.protein) == 1 and 0 <= args.protein[0] < len(receptors)) or (
                 len(args.protein) == 2 and 0 <= args.protein[0] < len(receptors) and 0 <= args.protein[1] < len(
-            receptors)):
+                receptors)):
 
             # get raw similarities for receptors
             receptor_similarities = raw_similarities[args.protein[0] if len(args.protein) == 1 else 0]
