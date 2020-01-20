@@ -162,6 +162,14 @@ def receptor_compare(receptor: Receptor, receptors: list) -> list:
     return [receptors_similarity(receptor, sec_receptor) for sec_receptor in receptors]
 
 
+def receptor_compare_con(receptor: Receptor, receptors: list) -> list:
+    import multiprocessing as mp
+    pool = mp.Pool(mp.cpu_count())
+    results = pool.starmap(receptors_similarity, [(receptor, sec_receptor) for sec_receptor in receptors])
+    pool.close()
+    return results
+
+
 # application modes, read help
 app_modes = [
     'all', 'sim', 'dist', 'map', 'pro'
@@ -227,16 +235,10 @@ def main():
     index = 1
     count = len(receptors)
 
+    # using scoring function, compare all vs all
     if args.concurrency:
-        import multiprocessing as mp
-        pool = mp.Pool(mp.cpu_count())
-
-        # using scoring function, compare all vs all
-        raw_similarities = pool.starmap(receptor_compare, [(rec, receptors) for rec in receptors])
-
-        pool.close()
+        raw_similarities = [receptor_compare_con(rec, receptors) for rec in receptors]
     else:
-        # using scoring function, compare all vs all
         raw_similarities = [receptor_compare(rec, receptors) for rec in receptors]
 
     # filter scores with proper threshold
