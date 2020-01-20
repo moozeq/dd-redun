@@ -3,14 +3,11 @@ import argparse
 import os
 import subprocess
 import sys
-import threading
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-
-threadLock = threading.Lock()
 
 index = 0
 count = 0
@@ -81,6 +78,7 @@ class Receptor:
 
 def prepare_files(receptor: Receptor) -> bool:
     # save files for computation
+    print(f'[*] [{receptor.name}] Checking files...', end='')
 
     # pdb file
     pdb_file_path = receptor.filename
@@ -88,58 +86,76 @@ def prepare_files(receptor: Receptor) -> bool:
         with open(pdb_file_path, 'w') as rec_file:
             rec_file.write(receptor.pdb)
 
+    if receptor.pdb and Path(pdb_file_path).exists():
+        print(f'\t{TermColors.OKGREEN}{pdb_file_path}{TermColors.ENDC}', end='')
+    else:
+        print(f'\t{TermColors.FAIL}{pdb_file_path}{TermColors.ENDC}', end='')
+        return False
+
     # cf pdb file
+    ret = 0
     cf_pdb_file_path = receptor.cf_filename
     if not Path(cf_pdb_file_path).exists():
         # here we provide pdb filename because it's input
         ret = subprocess.call(['java', 'AssignChemicalFeatures', pdb_file_path])
-        if ret:
-            print(f'[-] Error when creating chemical features file {cf_pdb_file_path}')
-            return False
 
-    return True
+    if ret or not Path(cf_pdb_file_path).exists():
+        print(f'\t{TermColors.FAIL}{cf_pdb_file_path}{TermColors.ENDC}')
+        return False
+    else:
+        print(f'\t{TermColors.OKGREEN}{cf_pdb_file_path}{TermColors.ENDC}')
+        return True
 
 
-def receptors_compare(receptor1: Receptor, receptor2: Receptor) -> float:
-    global index, count
-    with threadLock:
-        print(f'[*] [{receptor1.name}] [{index % count:3} / {count:3}] Comparing to: {receptor2.name}\tscore:\t',
-              end='')
-        index += 1
-    output_filename = f'{receptor1.name}_{receptor2.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor1.name}_{receptor2.name}.out'
-    if not Path(output_filename).exists():
-        with open(output_filename, 'w') as out_file:
-            cmd = ['./glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename,
-                   '-s2cf', receptor2.cf_filename]
-            ret = subprocess.call(cmd, stdout=out_file)
-            if ret:
-                print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
-                Path(output_filename).unlink()
-                return 0.0
-
-    with open(output_filename) as out_file:
-        for line in out_file:
-            if line.startswith('GA-score'):
-                score = line.split(':')[1]
-                score = float(score.strip())
-                if score > 0.8:
-                    print(f'{TermColors.WARNING}{score}{TermColors.ENDC}')
-                else:
-                    print(f'{TermColors.OKGREEN}{score}{TermColors.ENDC}')
-                return score
-        print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
-    Path(output_filename).unlink()
-    return 0.0
+def get_ga_score(glosa_output: str) -> float:
+    lines = glosa_output.splitlines()
+    for line in lines:
+        if line.startswith('GA-score'):
+            score = line.split(':')[1]
+            score = float(score.strip())
+            return score
+    return -1.0
 
 
 def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
-    rec1_ok = prepare_files(receptor1)
-    if not rec1_ok:
-        sys.exit(1)
-    rec2_ok = prepare_files(receptor2)
-    if not rec2_ok:
-        sys.exit(1)
-    return receptors_compare(receptor1, receptor2)
+    global index, count
+    output_filename = f'{receptor1.name}_{receptor2.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor1.name}_{receptor2.name}.out'
+    output_filename_opt = f'{receptor2.name}_{receptor1.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor2.name}_{receptor1.name}.out'
+    cmd = ['./glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename, '-s2cf',
+           receptor2.cf_filename]
+
+    print(f'[*] [{receptor1.name}] [{index % count:3} / {count:3}] Comparing to: {receptor2.name}\tscore:\t', end='')
+    index += 1
+
+    if not Path(output_filename).exists() and not Path(output_filename_opt).exists():
+        glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
+        if not glosa_output:
+            print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}\tCMD = {" ".join(cmd)}')
+            return 0.0
+        else:
+            with open(output_filename, 'w') as out_file:
+                out_file.write(glosa_output)
+            with open(output_filename_opt, 'w') as out_file:
+                out_file.write(glosa_output)
+    else:
+        if Path(output_filename).exists():
+            with open(output_filename, 'r') as out_file:
+                glosa_output = out_file.read()
+        else:
+            with open(output_filename_opt, 'r') as out_file:
+                glosa_output = out_file.read()
+
+    score = get_ga_score(glosa_output)
+    if score >= 0.0:
+        if score > 0.8:
+            print(f'{TermColors.WARNING}{score}{TermColors.ENDC}')
+        else:
+            print(f'{TermColors.OKGREEN}{score}{TermColors.ENDC}')
+    else:
+        print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
+        Path(output_filename).unlink()
+
+    return 0.0
 
 
 def receptor_compare(receptor: Receptor, receptors: list) -> list:
@@ -198,16 +214,18 @@ def main():
     # parse all receptors in merged pdb database
     with open(args.database) as db:
         pdbs = db.read().split('END')
-        pdbs = [f'{pdb.strip()}\nTER' for pdb in pdbs]
+        pdbs = [f'{pdb.strip()}\nTER' for pdb in pdbs if pdb.strip()]
         receptors = [Receptor(pdb, args.dir) for pdb in pdbs]
+        if not all([prepare_files(receptor) for receptor in receptors]):
+            print(f'[-] Preparing files failed')
+            sys.exit(1)
 
     # create directory
     Path(args.dir).mkdir(parents=True, exist_ok=True)
 
     global index, count
-    with threadLock:
-        index = 1
-        count = len(receptors)
+    index = 1
+    count = len(receptors)
 
     if args.concurrency:
         import multiprocessing as mp
