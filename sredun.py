@@ -127,12 +127,17 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
     info = f'[{index % count:3} / {count:3}] {receptor1.index}<->{receptor2.index}\t{receptor1.name}<->{receptor2.name}\tscore:\t'
     index += 1
 
+    glosa_output = ''
     # no file at proper path and optional path
     if not Path(output_filename).exists() and not Path(output_filename_opt).exists():
-        glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
-        if not glosa_output:
-            print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}\tCMD = {" ".join(cmd)}')
-            return 0.0
+        for i in range(3):
+            try:
+                glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
+            except subprocess.CalledProcessError as e:
+                print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}\n\tCMD = {" ".join(
+                    cmd)}\n\tREASON = {e.output}\n\t{TermColors.OKBLUE}RETRYING{TermColors.ENDC}')
+                if i >= 2:
+                    return 0.0
         else:
             with open(output_filename, 'w') as out_file:
                 out_file.write(glosa_output)
@@ -152,9 +157,9 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
     score = get_ga_score(glosa_output)
     if score >= 0.0:
         if score > 0.8:
-            print(f'{info}{TermColors.WARNING}{score}{TermColors.ENDC}')
+            print(f'{info}{TermColors.WARNING}{score: .6f}{TermColors.ENDC}')
         else:
-            print(f'{info}{TermColors.OKGREEN}{score}{TermColors.ENDC}')
+            print(f'{info}{TermColors.OKGREEN}{score: .6f}{TermColors.ENDC}')
     else:
         print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}')
         Path(output_filename).unlink()
@@ -283,11 +288,12 @@ def main():
     if args.mode in ['all', 'pro', 'sim', 'dist']:
         section_header = '========= RECEPTOR SIMILARITIES ========='
 
-        if (len(args.protein) == 1 and 0 <= args.protein < len(receptors)) or (
-                len(args.protein) == 2 and 0 <= args.protein[0] < len(receptors)):
+        if (len(args.protein) == 1 and 0 <= args.protein[0] < len(receptors)) or (
+                len(args.protein) == 2 and 0 <= args.protein[0] < len(receptors) and 0 <= args.protein[1] < len(
+            receptors)):
 
             # get raw similarities for receptors
-            receptor_similarities = raw_similarities[args.protein if len(args.protein) == 1 else 0]
+            receptor_similarities = raw_similarities[args.protein[0] if len(args.protein) == 1 else 0]
             # convert to dict where index: similarity
             receptor_sim_dict = {k: v for k, v in enumerate(receptor_similarities)}
             # sort dict by similarities where highest scores are at the bottom
@@ -298,7 +304,7 @@ def main():
             # get similarities as string
             receptor_sims = '\n'.join([f'{sim:.4f}\t{receptors[key].info}' for key, sim in receptor_sim_dict.items()])
             header = f'''Selected receptor:\n\t{receptors[
-                args.protein if len(args.protein) == 1 else 0].info}\n\nscore\tindex\tid\n'''
+                args.protein[0] if len(args.protein) == 1 else 0].info}\n\nscore\tindex\tid\n'''
             print(section_header)
             print(header)
             print(receptor_sims)
@@ -307,15 +313,21 @@ def main():
                     out.write(f'{section_header}\n')
                     out.write(header)
                     out.write(receptor_sims)
-        elif args.protein > 0:
+        elif args.protein[0] > 0 or (len(args.protein) == 2 and args.protein[1] > 0):
             print(f'[-] Wrong receptor selected, available indexes: (0 - {len(receptors) - 1})')
 
     # similarities graph
-    if args.mode in ['all', 'sim']:
+    if args.mode in ['all', 'sim', 'pro']:
         plt.figure()
-        plt.grid()
         plt.title(f'Receptors similarity map')
-        # show similarities between receptos as hot map
+        # not squared map
+        if len(similarities[0]) != len(similarities):
+            for i in range(len(similarities[0]) - 1):
+                similarities.append([0.0 for j in range(len(similarities[0]))])
+        # when only one receptor don't show grid
+        else:
+            plt.grid()
+        # show similarities between receptors as hot map
         plt.imshow(similarities, cmap='hot')
         plt.colorbar()
         # if output filename was provided, save .png to file
@@ -323,9 +335,13 @@ def main():
             plt.savefig(f'{args.output}_sim.png')
 
     # dist graph
-    if args.mode in ['all', 'dist']:
+    if args.mode in ['all', 'dist', 'pro']:
         plt.figure()
         plt.title(f'Receptors similarity graph where distance is similarity')
+        # not squared map
+        if len(similarities[0]) != len(similarities):
+            for i in range(len(similarities[0]) - 1):
+                similarities.append([0.0 for j in range(len(similarities[0]))])
         # create distance array from list of lists
         dist_mat = np.array(similarities)
         # create matrix
@@ -343,7 +359,7 @@ def main():
             plt.savefig(f'{args.output}_dist.png')
 
     # if mode required plots, show them now
-    if args.mode in ['all', 'sim', 'dist']:
+    if args.mode in ['all', 'sim', 'dist', 'pro']:
         plt.show()
 
 

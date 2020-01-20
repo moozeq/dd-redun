@@ -31,7 +31,10 @@ pip3 install -r requirements.txt
     for f in *; do cat ${f}/${f}_pocket.pdb >> prots.pdb; done
     ```
 7. Database should be at *CASF-2016/coreset/prots.pdb*, copy it into DD_Redun folder
-
+8. G-LoSA should be build used clang or g++:
+    ```bash
+    g++ glosa.cpp -o glosa
+    ```
 
 ## Requirements
 ### Main functionality
