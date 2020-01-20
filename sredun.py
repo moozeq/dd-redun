@@ -234,12 +234,16 @@ def main():
     global index, count
     index = 1
     count = len(receptors)
-
-    # using scoring function, compare all vs all
     if args.concurrency:
-        raw_similarities = [receptor_compare_con(rec, receptors) for rec in receptors]
+        compare_func = receptor_compare_con
     else:
-        raw_similarities = [receptor_compare(rec, receptors) for rec in receptors]
+        compare_func = receptor_compare
+
+    if args.mode in ['pro'] and len(receptors) > args.protein >= 0:
+        raw_similarities = compare_func(receptors[args.protein], receptors)
+    else:
+        # using scoring function, compare all vs all
+        raw_similarities = [compare_func(rec, receptors) for rec in receptors]
 
     # filter scores with proper threshold
     similarities = [list(map(lambda x: round(x, 4) if x >= args.threshold else 0.0, sim)) for sim in raw_similarities]
