@@ -3,6 +3,7 @@ import argparse
 import os
 import subprocess
 import sys
+from multiprocessing.pool import Pool
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -123,10 +124,10 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
     output_filename_opt = f'{receptor2.name}_{receptor1.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor2.name}_{receptor1.name}.out'
     cmd = ['glosa', '-s1', receptor1.filename, '-s1cf', receptor1.cf_filename, '-s2', receptor2.filename, '-s2cf',
            receptor2.cf_filename]
-
-    print(f'[*] [{receptor1.name}] [{index % count:3} / {count:3}] Comparing to: {receptor2.name}\tscore:\t', end='')
+    info = f'[{index % count:3} / {count:3}] {receptor1.index}<->{receptor2.index}\t{receptor1.name}<->{receptor2.name}\tscore:\t'
     index += 1
 
+    # no file at proper path and optional path
     if not Path(output_filename).exists() and not Path(output_filename_opt).exists():
         glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
         if not glosa_output:
@@ -135,24 +136,27 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
         else:
             with open(output_filename, 'w') as out_file:
                 out_file.write(glosa_output)
-            with open(output_filename_opt, 'w') as out_file:
-                out_file.write(glosa_output)
+    # path at proper or optional path
     else:
-        if Path(output_filename).exists():
-            with open(output_filename, 'r') as out_file:
-                glosa_output = out_file.read()
-        else:
+        if Path(output_filename_opt).exists():
             with open(output_filename_opt, 'r') as out_file:
+                glosa_output = out_file.read()
+            # only one file should exist
+            with open(output_filename, 'w') as out_file:
+                out_file.write(glosa_output)
+            Path(output_filename_opt).unlink()
+        else:
+            with open(output_filename, 'r') as out_file:
                 glosa_output = out_file.read()
 
     score = get_ga_score(glosa_output)
     if score >= 0.0:
         if score > 0.8:
-            print(f'{TermColors.WARNING}{score}{TermColors.ENDC}')
+            print(f'{info}{TermColors.WARNING}{score}{TermColors.ENDC}')
         else:
-            print(f'{TermColors.OKGREEN}{score}{TermColors.ENDC}')
+            print(f'{info}{TermColors.OKGREEN}{score}{TermColors.ENDC}')
     else:
-        print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
+        print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}')
         Path(output_filename).unlink()
 
     return score if score >= 0.0 else 0.0
@@ -164,9 +168,8 @@ def receptor_compare(receptor: Receptor, receptors: list) -> list:
 
 def receptor_compare_con(receptor: Receptor, receptors: list) -> list:
     import multiprocessing as mp
-    pool = mp.Pool(mp.cpu_count())
-    results = pool.starmap(receptors_similarity, [(receptor, sec_receptor) for sec_receptor in receptors])
-    pool.close()
+    with Pool(mp.cpu_count()) as pool:
+        results = pool.starmap(receptors_similarity, [(receptor, sec_receptor) for sec_receptor in receptors])
     return results
 
 
@@ -227,6 +230,8 @@ def main():
         if not all([prepare_files(receptor) for receptor in receptors]):
             print(f'[-] Preparing files failed')
             sys.exit(1)
+        else:
+            print(f'[+] All files loaded properly ({len(receptors) * 2}/{len(receptors) * 2})\n')
 
     # create directory
     Path(args.dir).mkdir(parents=True, exist_ok=True)
@@ -239,9 +244,24 @@ def main():
     else:
         compare_func = receptor_compare
 
+    # receptors mapping
+    if args.mode in ['all', 'map', 'sim', 'dist']:
+        section_header = '========= RECEPTORS MAPPING ========='
+        # get mapping as string and print to stdout
+        mapping = '\n'.join([receptor.info for receptor in receptors])
+        print(section_header)
+        print(mapping)
+        # if output filename was provided, write to file
+        if args.output:
+            with open(args.output, 'a') as out:
+                out.write(f'{section_header}\n')
+                out.write(mapping)
+        if args.mode == 'map':
+            sys.exit(0)
+
     if args.mode in ['pro']:
-        if len(args.protein) == 1 and len(receptors) > args.protein >= 0:
-            raw_similarities = [compare_func(receptors[args.protein], receptors)]
+        if len(args.protein) == 1 and len(receptors) > args.protein[0] >= 0:
+            raw_similarities = [compare_func(receptors[args.protein[0]], receptors)]
         elif len(args.protein) == 2 and len(receptors) > args.protein[0] >= 0 and len(receptors) > args.protein[1] >= 0:
             raw_similarities = [compare_func(receptors[args.protein[0]], [receptors[args.protein[1]]])]
         else:
@@ -258,19 +278,6 @@ def main():
     if args.output and os.path.exists(args.output):
         print(f'[*] Overwriting output file = {args.output}')
         os.remove(args.output)
-
-    # receptors mapping
-    if args.mode in ['all', 'map', 'sim', 'dist']:
-        section_header = '========= RECEPTORS MAPPING ========='
-        # get mapping as string and print to stdout
-        mapping = '\n'.join([receptor.info for receptor in receptors])
-        print(section_header)
-        print(mapping)
-        # if output filename was provided, write to file
-        if args.output:
-            with open(args.output, 'a') as out:
-                out.write(f'{section_header}\n')
-                out.write(mapping)
 
     # selected receptor similar proteins
     if args.mode in ['all', 'pro', 'sim', 'dist']:
