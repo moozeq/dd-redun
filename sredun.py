@@ -3,11 +3,17 @@ import argparse
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+
+threadLock = threading.Lock()
+
+index = 0
+count = 0
 
 
 class TermColors:
@@ -94,8 +100,12 @@ def prepare_files(receptor: Receptor) -> bool:
     return True
 
 
-def receptors_compare(receptor1: Receptor, receptor2: Receptor, index: int, count: int) -> float:
-    print(f'[*] [{index} / {count}] Comparing receptors: {receptor1.name} <-> {receptor2.name}\tscore:\t', end='')
+def receptors_compare(receptor1: Receptor, receptor2: Receptor) -> float:
+    global index, count
+    with threadLock:
+        print(f'[*] [{receptor1.name}] [{index % count:3} / {count:3}] Comparing to: {receptor2.name}\tscore:\t',
+              end='')
+        index += 1
     output_filename = f'{receptor1.name}_{receptor2.name}.out' if not receptor1.directory else f'{receptor1.directory}/{receptor1.name}_{receptor2.name}.out'
     if not Path(output_filename).exists():
         with open(output_filename, 'w') as out_file:
@@ -104,6 +114,7 @@ def receptors_compare(receptor1: Receptor, receptor2: Receptor, index: int, coun
             ret = subprocess.call(cmd, stdout=out_file)
             if ret:
                 print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
+                Path(output_filename).unlink()
                 return 0.0
 
     with open(output_filename) as out_file:
@@ -116,16 +127,23 @@ def receptors_compare(receptor1: Receptor, receptor2: Receptor, index: int, coun
                 else:
                     print(f'{TermColors.OKGREEN}{score}{TermColors.ENDC}')
                 return score
+        print(f'{TermColors.FAIL}ERROR{TermColors.ENDC}')
+    Path(output_filename).unlink()
+    return 0.0
 
 
-def receptors_similarity(receptor1: Receptor, receptor2: Receptor, index: int, count: int) -> float:
+def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
     rec1_ok = prepare_files(receptor1)
     if not rec1_ok:
         sys.exit(1)
     rec2_ok = prepare_files(receptor2)
     if not rec2_ok:
         sys.exit(1)
-    return receptors_compare(receptor1, receptor2, index, count)
+    return receptors_compare(receptor1, receptor2)
+
+
+def receptor_compare(receptor: Receptor, receptors: list) -> list:
+    return [receptors_similarity(receptor, sec_receptor) for sec_receptor in receptors]
 
 
 # application modes, read help
@@ -161,6 +179,8 @@ def main():
                         ''')
     parser.add_argument('-p', '--protein', type=int, default=-1,
                         help='select protein to show its similarities')
+    parser.add_argument('-c', '--concurrency', action='store_true',
+                        help='parallel computation')
     parser.add_argument('-t', '--threshold', type=float, default=0.0,
                         help='similarity threshold inclusive (0.0 - 1.0)')
     parser.add_argument('-d', '--dir', type=str, default='analysis',
@@ -184,10 +204,23 @@ def main():
     # create directory
     Path(args.dir).mkdir(parents=True, exist_ok=True)
 
-    # using scoring function, compare all vs all
-    raw_similarities = [
-        [receptors_similarity(rec1, rec2, (i + 1) * (j + 1), len(receptors) * len(receptors)) for j, rec2 in
-         enumerate(receptors)] for i, rec1 in enumerate(receptors)]
+    global index, count
+    with threadLock:
+        index = 1
+        count = len(receptors)
+
+    if args.concurrency:
+        import multiprocessing as mp
+        pool = mp.Pool(mp.cpu_count())
+
+        # using scoring function, compare all vs all
+        raw_similarities = pool.starmap(receptor_compare, [(rec, receptors) for rec in receptors])
+
+        pool.close()
+    else:
+        # using scoring function, compare all vs all
+        raw_similarities = [receptor_compare(rec, receptors) for rec in receptors]
+
     # filter scores with proper threshold
     similarities = [list(map(lambda x: round(x, 4) if x >= args.threshold else 0.0, sim)) for sim in raw_similarities]
 
