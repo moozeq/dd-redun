@@ -134,8 +134,7 @@ def receptors_similarity(receptor1: Receptor, receptor2: Receptor) -> float:
             try:
                 glosa_output = subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
             except subprocess.CalledProcessError as e:
-                print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}\n\tCMD = {" ".join(
-                    cmd)}\n\tREASON = {e.output}\n\t{TermColors.OKBLUE}RETRYING{TermColors.ENDC}')
+                print(f'{info}{TermColors.FAIL}ERROR{TermColors.ENDC}\n\tCMD = {" ".join(cmd)}\n\tREASON = {e.output}\n\t{TermColors.OKBLUE}RETRYING{TermColors.ENDC}')
                 if i >= 2:
                     return 0.0
         else:
