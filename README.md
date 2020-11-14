@@ -15,7 +15,7 @@ pip3 install -r requirements.txt
 
 ### Ligands
 
-1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used pre-built database from [demo/db.smi](demo/db.smi), in that case skip to *4*)
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used pre-built database from [demo/db.smi](demo/db.smi), in that case skip to **4.**)
     ```bash
     # move coreset from CASF-2016
     mv CASF-2016/coreset .
@@ -36,7 +36,7 @@ pip3 install -r requirements.txt
 
 ### Receptors
 
-6. Run script from below (simply merging all x_pocket.pdb files into one file database) or use pre-built database from [demo/prots.pdb](demo/prots.pdb):
+6. Run script from below (simply merging all `x_pocket.pdb` files into one file database) or use pre-built database from [demo/prots.pdb](demo/prots.pdb):
     ```bash
     # generate prots database
     for f in `ls coreset/`; do cat coreset/${f}/${f}_pocket.pdb >> prots.pdb; done
