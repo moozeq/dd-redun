@@ -15,23 +15,33 @@ pip3 install -r requirements.txt
 
 ### Ligands
 
-1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp))
-2. You may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints
-3. In *CASF-2016/coreset* run script from below (simply getting smiles and id for each ligand):
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used built database from [demo/smi.db](demo/smi.db), in that case skip to *4*)
     ```bash
-    for f in *; do obabel -imol2 ${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
+    # move coreset from CASF-2016
+    mv CASF-2016/coreset .
+
+    # or use built database from demo and skip to 4
+    cp demo/smi.db .
     ```
-4. Database should be at *CASF-2016/coreset/db.smi*, copy it into DD_Redun folder
-5. For docking functionality you need to also copy *coreset* folder into DD_Redun folder
+2. In case of **CASF-2016** you may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints:
+    ```bash
+    rm -rf coreset/4mme
+    ```
+3. Run script from below (simply getting smiles and id for each ligand):
+    ```bash
+    for f in `ls coreset/`; do obabel -imol2 coreset/${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
+    ```
+4. Database should be at `DD_Redun/db.smi`
+5. For docking functionality whole `coreset` folder must be under `DD_Redun/coreset` directory
 
 ### Receptors
 
-6. In *CASF-2016/coreset* run script from below (simply merging all x_pocket.pdb files into one file database):
+6. Run script from below (simply merging all x_pocket.pdb files into one file database):
     ```bash
-    for f in *; do cat ${f}/${f}_pocket.pdb >> prots.pdb; done
+    for f in `ls coreset/`; do cat coreset/${f}/${f}_pocket.pdb >> prots.pdb; done
     ```
-7. Database should be at *CASF-2016/coreset/prots.pdb*, copy it into DD_Redun folder
-8. G-LoSA should be build used clang or g++:
+7. Database should be at `DD_Redun/prots.pdb`
+8. Build G-LoSA using clang or g++:
     ```bash
     g++ glosa.cpp -o glosa
     ```
@@ -77,3 +87,14 @@ cat prots.pdb | ./sredun.py
 # Report
 
 Report from project is available [here](docs/Report_PL.pdf) (in Polish).
+
+<html>
+<body>
+    <div>
+        <h4>Selected results plots</h4>
+        <p><img src="demo/all_no_threshold.png"></p>
+        <p><img src="demo/all_no_threshold_dist.png"></p>
+        <p><img src="demo/complex_1_t08_dist.png"></p>
+    </div>
+</body>
+</html>
