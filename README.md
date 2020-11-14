@@ -15,13 +15,13 @@ pip3 install -r requirements.txt
 
 ### Ligands
 
-1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used built database from [demo/smi.db](demo/smi.db), in that case skip to *4*)
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used pre-built database from [demo/db.smi](demo/db.smi), in that case skip to *4*)
     ```bash
     # move coreset from CASF-2016
     mv CASF-2016/coreset .
 
-    # or use built database from demo and skip to 4
-    cp demo/smi.db .
+    # or use pre-built database from demo and skip to 4
+    cp demo/db.smi .
     ```
 2. In case of **CASF-2016** you may need to remove **4mme** complex, because ligand from this complex is causing error when creating fingerprints:
     ```bash
@@ -36,9 +36,13 @@ pip3 install -r requirements.txt
 
 ### Receptors
 
-6. Run script from below (simply merging all x_pocket.pdb files into one file database):
+6. Run script from below (simply merging all x_pocket.pdb files into one file database) or use pre-built database from [demo/prots.pdb](demo/prots.pdb):
     ```bash
+    # generate prots database
     for f in `ls coreset/`; do cat coreset/${f}/${f}_pocket.pdb >> prots.pdb; done
+    
+    # or use pre-built database from demo
+    cp demo/prots.pdb .
     ```
 7. Database should be at `DD_Redun/prots.pdb`
 8. Build G-LoSA using clang or g++:
