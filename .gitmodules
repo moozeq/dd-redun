@@ -1,0 +1,3 @@
+[submodule "DD_Scaffolds"]
+    path = DD_Scaffolds
+    url = git://github.com/moozeq/DD_Scaffolds

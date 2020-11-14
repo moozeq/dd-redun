@@ -73,3 +73,7 @@ cat db.smi | ./redun.py
 cat db.smi | ./scorun.py [ints]
 cat prots.pdb | ./sredun.py
 ```
+
+# Report
+
+Report from project is available [here](docs/Report_PL.pdf) (in Polish).
