@@ -4,9 +4,9 @@ Finding similarities and redundancy in chemical data sets.
 # Installation
 
 ```bash
-git clone https://github.com/moozeq/DD_Redun.git
+git clone https://github.com/moozeq/dd-redun.git
 
-cd DD_Redun
+cd dd-redun
 git submodule update --init --recursive
 pip3 install -r requirements.txt
 ```
@@ -15,7 +15,7 @@ pip3 install -r requirements.txt
 
 ### Ligands
 
-1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `DD_Redun/coreset` (you may also used pre-built database from [demo/db.smi](demo/db.smi), in that case skip to **4.**)
+1. Download PDBBind database (e.g. [CASF-2016](http://www.pdbbind.org.cn/casf.asp)) and move its `coreset` to `dd-redun/coreset` (you may also used pre-built database from [demo/db.smi](demo/db.smi), in that case skip to **4.**)
     ```bash
     # move coreset from CASF-2016
     mv CASF-2016/coreset .
@@ -31,8 +31,8 @@ pip3 install -r requirements.txt
     ```bash
     for f in `ls coreset/`; do obabel -imol2 coreset/${f}/${f}_ligand.mol2 -osmi | awk '{print $1" "$2}' >> db.smi; done
     ```
-4. Database should be at `DD_Redun/db.smi`
-5. For docking functionality whole `coreset` folder must be under `DD_Redun/coreset` directory
+4. Database should be at `dd-redun/db.smi`
+5. For docking functionality whole `coreset` folder must be under `dd-redun/coreset` directory
 
 ### Receptors
 
@@ -44,7 +44,7 @@ pip3 install -r requirements.txt
     # or use pre-built database from demo
     cp demo/prots.pdb .
     ```
-7. Database should be at `DD_Redun/prots.pdb`
+7. Database should be at `dd-redun/prots.pdb`
 8. Build G-LoSA using clang or g++:
     ```bash
     g++ glosa.cpp -o glosa
